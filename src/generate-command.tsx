@@ -57,6 +57,7 @@ export default function Command() {
   const [searchText, setSearchText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [history, setHistory] = useState<string[]>([]);
+  const [listKey, setListKey] = useState(0);
 
   useEffect(() => {
     getHistory().then(setHistory);
@@ -119,6 +120,7 @@ export default function Command() {
 
   return (
     <List
+      key={listKey}
       isLoading={isLoading}
       searchText={searchText}
       onSearchTextChange={setSearchText}
@@ -146,12 +148,10 @@ export default function Command() {
               title={item}
               actions={
                 <ActionPanel>
-                  <Action title="Generate & Paste" onAction={() => generateCommand(item)} />
-                  <Action
-                    title="Edit Prompt"
-                    onAction={() => setSearchText(item)}
-                    shortcut={{ modifiers: ["cmd"], key: "e" }}
-                  />
+                  <Action title="Use Prompt" onAction={() => {
+                    setSearchText(item);
+                    setListKey((k) => k + 1);
+                  }} />
                   <Action
                     title="Clear History"
                     style={Action.Style.Destructive}
