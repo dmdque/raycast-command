@@ -4,7 +4,10 @@
   "description": "Generate CLI commands from natural language using AI",
   "icon": "icon.png",
   "author": "dq",
-  "categories": ["Developer Tools", "Productivity"],
+  "categories": [
+    "Developer Tools",
+    "Productivity"
+  ],
   "license": "MIT",
   "commands": [
     {
@@ -16,15 +19,35 @@
   ],
   "preferences": [
     {
+      "name": "model",
+      "title": "Model",
+      "description": "Which AI model to use",
+      "type": "dropdown",
+      "required": true,
+      "default": "claude-haiku",
+      "data": [
+        { "title": "Claude Haiku 4.5", "value": "claude-haiku" },
+        { "title": "Gemini Flash 2.5 Lite", "value": "gemini-flash-lite" }
+      ]
+    },
+    {
       "name": "anthropicApiKey",
       "title": "Anthropic API Key",
-      "description": "Your Anthropic API key for Claude",
+      "description": "Your Anthropic API key for Claude (required if using Claude)",
       "type": "password",
-      "required": true
+      "required": false
+    },
+    {
+      "name": "googleApiKey",
+      "title": "Google AI API Key",
+      "description": "Your Google AI API key for Gemini (required if using Gemini)",
+      "type": "password",
+      "required": false
     }
   ],
   "dependencies": {
     "@anthropic-ai/sdk": "^0.52.0",
+    "@google/generative-ai": "^0.24.1",
     "@raycast/api": "^1.93.2"
   },
   "devDependencies": {

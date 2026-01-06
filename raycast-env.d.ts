@@ -8,8 +8,12 @@
 /* eslint-disable @typescript-eslint/ban-types */
 
 type ExtensionPreferences = {
-  /** Anthropic API Key - Your Anthropic API key for Claude */
-  "anthropicApiKey": string
+  /** Model - Which AI model to use */
+  "model": "claude-haiku" | "gemini-flash-lite",
+  /** Anthropic API Key - Your Anthropic API key for Claude (required if using Claude) */
+  "anthropicApiKey"?: string,
+  /** Google AI API Key - Your Google AI API key for Gemini (required if using Gemini) */
+  "googleApiKey"?: string
 }
 
 /** Preferences accessible in all the extension's commands */

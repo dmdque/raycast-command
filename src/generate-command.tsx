@@ -14,10 +14,13 @@ import {
 } from "@raycast/api";
 import { useState, useEffect } from "react";
 import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { execSync } from "child_process";
 
 interface Preferences {
-  anthropicApiKey: string;
+  model: "claude-haiku" | "gemini-flash-lite";
+  anthropicApiKey?: string;
+  googleApiKey?: string;
 }
 
 const HISTORY_KEY = "command-history";
@@ -161,6 +164,33 @@ async function addToHistory(prompt: string): Promise<string[]> {
   return updated;
 }
 
+async function callAI(preferences: Preferences, prompt: string): Promise<string> {
+  if (preferences.model === "gemini-flash-lite") {
+    if (!preferences.googleApiKey) {
+      throw new Error("Google API key required for Gemini");
+    }
+    const genAI = new GoogleGenerativeAI(preferences.googleApiKey);
+    const model = genAI.getGenerativeModel({
+      model: "gemini-2.5-flash-lite",
+      systemInstruction: SYSTEM_PROMPT,
+    });
+    const result = await model.generateContent(prompt);
+    return result.response.text().trim();
+  } else {
+    if (!preferences.anthropicApiKey) {
+      throw new Error("Anthropic API key required for Claude");
+    }
+    const client = new Anthropic({ apiKey: preferences.anthropicApiKey });
+    const message = await client.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 256,
+      system: SYSTEM_PROMPT,
+      messages: [{ role: "user", content: prompt }],
+    });
+    return message.content[0].type === "text" ? message.content[0].text.trim() : "";
+  }
+}
+
 export default function Command() {
   const [searchText, setSearchText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -184,20 +214,10 @@ export default function Command() {
 
     try {
       const preferences = getPreferenceValues<Preferences>();
-      const client = new Anthropic({ apiKey: preferences.anthropicApiKey });
-
       const context = await gatherContext();
       const fullPrompt = buildPrompt(prompt, context);
 
-      const message = await client.messages.create({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 256,
-        system: SYSTEM_PROMPT,
-        messages: [{ role: "user", content: fullPrompt }],
-      });
-
-      const command =
-        message.content[0].type === "text" ? message.content[0].text.trim() : "";
+      const command = await callAI(preferences, fullPrompt);
 
       if (!command) {
         await showToast({
