@@ -10,9 +10,11 @@ import {
   showHUD,
   Icon,
   LocalStorage,
+  getSelectedText,
 } from "@raycast/api";
 import { useState, useEffect } from "react";
 import Anthropic from "@anthropic-ai/sdk";
+import { execSync } from "child_process";
 
 interface Preferences {
   anthropicApiKey: string;
@@ -29,6 +31,7 @@ Rules:
 - Use common Unix conventions
 - Prefer portable/POSIX commands when possible
 - If the request is ambiguous, make a reasonable assumption and output a working command
+- If context is provided (selected text, current app, current directory), use it to inform your command
 
 Examples:
 User: "find all js files modified in the last day"
@@ -39,6 +42,79 @@ Output: du -sh * | sort -h
 
 User: "kill process on port 3000"
 Output: lsof -ti:3000 | xargs kill -9`;
+
+interface Context {
+  selectedText?: string;
+  currentApp?: string;
+  currentDirectory?: string;
+}
+
+function runAppleScript(script: string): string | undefined {
+  try {
+    return execSync(`osascript -e '${script}'`, { encoding: "utf-8" }).trim();
+  } catch {
+    return undefined;
+  }
+}
+
+async function gatherContext(): Promise<Context> {
+  const context: Context = {};
+
+  // Get selected text from previous app
+  try {
+    context.selectedText = await getSelectedText();
+  } catch {
+    // No text selected or not available
+  }
+
+  // Get the previous frontmost app (before Raycast)
+  const appScript = `
+    tell application "System Events"
+      set appList to name of every application process whose visible is true and frontmost is false
+      if (count of appList) > 0 then
+        return item 1 of appList
+      end if
+    end tell
+  `;
+  context.currentApp = runAppleScript(appScript);
+
+  // Get current directory from Terminal/iTerm if that's the previous app
+  if (context.currentApp === "Terminal") {
+    const dirScript = `tell application "Terminal" to get custom title of selected tab of front window`;
+    const dir = runAppleScript(dirScript);
+    if (!dir) {
+      // Fallback: try to get from window name which often contains the path
+      const windowScript = `tell application "Terminal" to get name of front window`;
+      context.currentDirectory = runAppleScript(windowScript);
+    } else {
+      context.currentDirectory = dir;
+    }
+  } else if (context.currentApp === "iTerm2" || context.currentApp === "iTerm") {
+    const dirScript = `tell application "iTerm2" to tell current session of current window to get variable named "path"`;
+    context.currentDirectory = runAppleScript(dirScript);
+  }
+
+  return context;
+}
+
+function buildPrompt(userPrompt: string, context: Context): string {
+  const parts: string[] = [];
+
+  if (context.currentApp) {
+    parts.push(`Current app: ${context.currentApp}`);
+  }
+  if (context.currentDirectory) {
+    parts.push(`Current directory: ${context.currentDirectory}`);
+  }
+  if (context.selectedText) {
+    parts.push(`Selected text:\n${context.selectedText}`);
+  }
+
+  if (parts.length > 0) {
+    return `Context:\n${parts.join("\n")}\n\nRequest: ${userPrompt}`;
+  }
+  return userPrompt;
+}
 
 async function getHistory(): Promise<string[]> {
   const stored = await LocalStorage.getItem<string>(HISTORY_KEY);
@@ -78,11 +154,14 @@ export default function Command() {
       const preferences = getPreferenceValues<Preferences>();
       const client = new Anthropic({ apiKey: preferences.anthropicApiKey });
 
+      const context = await gatherContext();
+      const fullPrompt = buildPrompt(prompt, context);
+
       const message = await client.messages.create({
         model: "claude-haiku-4-5-20251001",
         max_tokens: 256,
         system: SYSTEM_PROMPT,
-        messages: [{ role: "user", content: prompt }],
+        messages: [{ role: "user", content: fullPrompt }],
       });
 
       const command =
