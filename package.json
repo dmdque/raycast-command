@@ -1,0 +1,46 @@
+{
+  "name": "command-gen",
+  "title": "Command Gen",
+  "description": "Generate CLI commands from natural language using AI",
+  "icon": "icon.png",
+  "author": "dq",
+  "categories": ["Developer Tools", "Productivity"],
+  "license": "MIT",
+  "commands": [
+    {
+      "name": "generate-command",
+      "title": "Generate Command",
+      "description": "Generate a CLI command from natural language",
+      "mode": "view"
+    }
+  ],
+  "preferences": [
+    {
+      "name": "anthropicApiKey",
+      "title": "Anthropic API Key",
+      "description": "Your Anthropic API key for Claude",
+      "type": "password",
+      "required": true
+    }
+  ],
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.52.0",
+    "@raycast/api": "^1.93.2"
+  },
+  "devDependencies": {
+    "@raycast/eslint-config": "^1.0.11",
+    "@types/node": "22.13.9",
+    "@types/react": "18.3.18",
+    "eslint": "^8.57.0",
+    "prettier": "^3.5.3",
+    "typescript": "^5.8.2"
+  },
+  "scripts": {
+    "build": "ray build",
+    "dev": "ray develop",
+    "fix-lint": "ray lint --fix",
+    "lint": "ray lint",
+    "prepublishOnly": "echo \"\\n\\nIt seems like you are trying to publish the Raycast extension to npm.\\n\\nIf you did intend to publish it to npm, remove the \\`prepublishOnly\\` script and rerun \\`npm publish\\` again.\\nIf you wanted to publish it to the Raycast Store instead, use \\`npm run publish\\` instead.\\n\\n\" && exit 1",
+    "publish": "npx @raycast/api@latest publish"
+  }
+}
